@@ -200,7 +200,7 @@
 
 
     - 1. 장비등록 서비스를 오더 / 승인 서비스와 격리되어 오더 / 승인 모듈 장애 시에도 장비 등록 가능
-    - 2. 2.	오더 승인 시 오더의 상태가 변경되며 이를 별도의 모듈로 확인 가능
+    - 2. 오더 승인 시 오더의 상태가 변경되며 이를 별도의 모듈로 확인 가능
  
 
 
@@ -382,10 +382,10 @@ http http://localhost:8083/equipments/1
 
 ## 폴리글랏 퍼시스턴스
 
-각 마이크로서비스는 별도의 H2 DB를 가지고 있으며 CQRS를 위한 Mypage에서는 H2가 아닌 HSQLDB를 적용하였다.
+각 마이크로서비스는 별도의 H2 DB를 가지고 있으며 CQRS를 위한 MIS 서비스에서는 H2가 아닌 HSQLDB를 적용하였다.
 
 ```
-# Mypage의 pom.xml에 dependency 추가
+# MIS의 pom.xml에 dependency 추가
 <!-- 
 		<dependency>
 			<groupId>com.h2database</groupId>
@@ -408,56 +408,83 @@ http http://localhost:8083/equipments/1
 
 ## 동기식 호출 과 Fallback 처리
 
-분석단계에서의 조건 중 하나로 예약(book)->결제(payment) 간의 호출은 동기식 일관성을 유지하는 트랜잭션으로 처리하기로 하였다. 호출 프로토콜은 이미 앞서 Rest Repository 에 의해 노출되어있는 REST 서비스를 FeignClient 를 이용하여 호출하도록 한다. 
+분석단계에서의 조건 중 하나로 오더(order)->승인(approval) 간의 호출은 동기식 일관성을 유지하는 트랜잭션으로 처리하기로 하였다. 호출 프로토콜은 이미 앞서 Rest Repository 에 의해 노출되어있는 REST 서비스를 FeignClient 를 이용하여 호출하도록 한다. 
 
-- 결제서비스를 호출하기 위하여 Stub과 (FeignClient) 를 이용하여 Service 대행 인터페이스 (Proxy) 를 구현 
+- 승인서비스를 호출하기 위하여 Stub과 (FeignClient) 를 이용하여 Service 대행 인터페이스 (Proxy) 를 구현 
 
 ```
-# (app) 결제이력Service.java
+# Order서비스의 ApprovalService.java
 
-package fooddelivery.external;
 
-@FeignClient(name="pay", url="http://localhost:8082")//, fallback = 결제이력ServiceFallback.class)
-public interface 결제이력Service {
+package equipmgnt.external;
 
-    @RequestMapping(method= RequestMethod.POST, path="/결제이력s")
-    public void 결제(@RequestBody 결제이력 pay);
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+import java.util.Date;
+
+@FeignClient(name="approval", url="${api.approval.url}")
+public interface ApprovalService {
+
+    @RequestMapping(method= RequestMethod.POST, path="/approvals")
+    public void requestapprove(@RequestBody Approval approval);
 
 }
-```
 
-- 주문을 받은 직후(@PostPersist) 결제를 요청하도록 처리
-```
-# Order.java (Entity)
-
-    @PostPersist
+# Order서비스 생성 시 승인 내역의 Approval객체를 같이 던진다. (자동승인)
+   @PostPersist
     public void onPostPersist(){
 
-        fooddelivery.external.결제이력 pay = new fooddelivery.external.결제이력();
-        pay.setOrderId(getOrderId());
-        
-        Application.applicationContext.getBean(fooddelivery.external.결제이력Service.class)
-                .결제(pay);
+        try {
+            Thread.currentThread().sleep((long) (800 + Math.random() * 220));
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        Ordered ordered = new Ordered();
+        BeanUtils.copyProperties(this, ordered);
+        ordered.publishAfterCommit();
+
+        //Following code causes dependency to external APIs
+        // it is NOT A GOOD PRACTICE. instead, Event-Policy mapping is recommended.
+
+
+        equipmgnt.external.Approval approval = new equipmgnt.external.Approval();
+
+        approval.setOrderId(ordered.getId());
+        approval.setQty(ordered.getQty());
+        approval.setEquipmentId(ordered.getEquipmentId());
+        approval.setStatus("APPROVED");
+        // mappings goes here
+        OrderApplication.applicationContext.getBean(equipmgnt.external.ApprovalService.class)
+            .requestapprove(approval);
+
+
     }
-```
-
-- 동기식 호출에서는 호출 시간에 따른 타임 커플링이 발생하며, 결제 시스템이 장애가 나면 주문도 못받는다는 것을 확인:
 
 
 ```
-# 결제 (pay) 서비스를 잠시 내려놓음 (ctrl+c)
 
-#주문처리
-http localhost:8081/orders item=통닭 storeId=1   #Fail
-http localhost:8081/orders item=피자 storeId=2   #Fail
 
-#결제서비스 재기동
-cd 결제
+
+- 동기식 호출에서는 호출 시간에 따른 타임 커플링이 발생하며, 승인 시스템이 장애가 나면 오더도 못받는다는 것을 확인:
+
+
+```
+# 승인 (approval) 서비스를 잠시 내려놓음 (ctrl+c)
+
+#오더처리
+http http://localhost:8081/orders qty=2 equipmentId=1 status=ORDERED   #Fail
+http http://localhost:8081/orders qty=3 equipmentId=1 status=ORDERED   #Fail
+
+#승인서비스 재기동
+cd approval
 mvn spring-boot:run
 
 #주문처리
-http localhost:8081/orders item=통닭 storeId=1   #Success
-http localhost:8081/orders item=피자 storeId=2   #Success
+http http://localhost:8081/orders qty=2 equipmentId=1 status=ORDERED   #Success
+http http://localhost:8081/orders qty=3 equipmentId=1 status=ORDERED   #Success
 ```
 
 - 또한 과도한 요청시에 서비스 장애가 도미노 처럼 벌어질 수 있다. (서킷브레이커, 폴백 처리는 운영단계에서 설명한다.)
@@ -468,57 +495,67 @@ http localhost:8081/orders item=피자 storeId=2   #Success
 ## 비동기식 호출 / 시간적 디커플링 / 장애격리 / 최종 (Eventual) 일관성 테스트
 
 
-결제가 이루어진 후에 숙소에 이를 알려주는 행위는 동기식이 아니라 비 동기식으로 처리하여 숙소 시스템의 처리를 위하여 결제주문이 블로킹 되지 않아도록 처리한다.
+승인이 이루어진 후에 장비 모듈에 이를 알려주는 행위는 동기식이 아니라 비 동기식으로 처리하여 장비 시스템의 처리가 블로킹 되지 않도록 처리한다.
  
-- 이를 위하여 결제이력에 기록을 남긴 후에 곧바로 결제승인이 되었다는 도메인 이벤트를 카프카로 송출한다(Publish)
+- 이를 위하여 승인이력에 기록을 남긴 후에 곧바로 승인이 되었다는 도메인 이벤트를 카프카로 송출한다(Publish)
  
 ```
-package fooddelivery;
+    @PostPersist
+    public void onPostPersist(){
 
-@Entity
-@Table(name="결제이력_table")
-public class 결제이력 {
+        ApprovalObtained approvalObtained = new ApprovalObtained();
+        BeanUtils.copyProperties(this, approvalObtained);
+        approvalObtained.publishAfterCommit();
 
- ...
-    @PrePersist
-    public void onPrePersist(){
-        결제승인됨 결제승인됨 = new 결제승인됨();
-        BeanUtils.copyProperties(this, 결제승인됨);
-        결제승인됨.publish();
+
     }
-
-}
 ```
-- 숙소 서비스에서는 결제승인 이벤트에 대해서 이를 수신하여 자신의 정책을 처리하도록 PolicyHandler 를 구현한다:
+- 장비 서비스에서는 승인 이벤트에 대해서 이를 수신하여 자신의 정책을 처리하도록 PolicyHandler 를 구현한다:
 
 ```
-package fooddelivery;
+   @StreamListener(KafkaProcessor.INPUT)
+    public void onStringEventListener(@Payload String eventString){
 
-...
-
-@Service
-public class PolicyHandler{
+    }
+    @Autowired
+    EquipmentRepository equipmentRepository;
 
     @StreamListener(KafkaProcessor.INPUT)
-    public void whenever결제승인됨_주문정보받음(@Payload 결제승인됨 결제승인됨){
+    public void wheneverApprovalObtained_Decrease(@Payload ApprovalObtained approvalObtained){
 
-        if(결제승인됨.isMe()){
-            System.out.println("##### listener 주문정보받음 : " + 결제승인됨.toJson());
-            // 주문 정보를 받았으니, 요리를 슬슬 시작해야지..
-            
+        if(approvalObtained.isMe()){
+            System.out.println("##### listener Decrease : " + approvalObtained.toJson());
+
+            Optional<Equipment> equipmentOptional = equipmentRepository.findById(approvalObtained.getEquipmentId());
+
+            Equipment equipment = equipmentOptional.get();
+            equipment.setStock(equipment.getStock()-approvalObtained.getQty());
+
+
+            equipmentRepository.save(equipment);
         }
     }
 
-}
+    @StreamListener(KafkaProcessor.INPUT)
+    public void wheneverCancelRequested_Increased(@Payload CancelRequested cancelRequested){
 
-```
+        if(cancelRequested.isMe()){
+            System.out.println("##### listener Increased : " + cancelRequested.toJson());
+            Optional<Equipment> equipmentOptional = equipmentRepository.findById(cancelRequested.getEquipmentId());
+
+            Equipment equipment = equipmentOptional.get();
+            equipment.setStock(equipment.getStock()+cancelRequested.getQty());
+
+            equipmentRepository.save(equipment);
+        }
+    }
   
 ```
 
 
 ```
 
-숙소 시스템은 예약/결제와 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, 예약/결제 시스템이 유지보수로 인해 잠시 내려간 상태라도 숙소를 등록하는데 문제가 없다:
+장비 시스템은 오더/승인과 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, /승인 시스템이 유지보수로 인해 잠시 내려간 상태라도 장비를 등록하는데 문제가 없다:
 ```
 # 상점 서비스 (store) 를 잠시 내려놓음 (ctrl+c)
 
