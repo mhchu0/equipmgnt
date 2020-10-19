@@ -4,7 +4,7 @@
 
 # Table of contents
 
-- [숙소예약](#---)
+- [장비대여](#---)
   - [서비스 시나리오](#서비스-시나리오)
   - [체크포인트](#체크포인트)
   - [분석/설계](#분석설계)
@@ -26,30 +26,29 @@
 
 
 기능적 요구사항
-1.	관리자는 숙소를 등록할 수 있다.
-2.	고객이 숙소를 선택해 예약하면 결제가 진행된다.
-3.	예약이 결제되면 숙소의 예약 가능 여부가 변경된다.
-4.	숙소가 예약 불가 상태로 변경되면 예약이 확정된다.
-5.	고객은 예약을 취소할 수 있다.
-6.	예약이 취소되면 결제가 취소되고 숙소의 예약 가능 여부가 변경된다.
-7.	고객은 숙소 예약가능여부를 확인할 수 있다.
+1.	Manager는 장비를 등록할 수 있다.
+2.	Employee가 장비를 오더하면 승인 요청이 생성되며 자동 승인된다
+3.	요청이 승인되면 오더의 상태가 APPROVED로 변경되며, 장비의 재고가 오더된 만큼 감소한다.
+4.	Employee는 장비 오더를 취소할 수 있다.
+5.	오더가 취소되면 승인 상태가 CANCELLED으로 변경되고 취소된 오더만큼 장비의 재고가 증가한다.
+6.	Employee는 장비 오더의 상태를 확인할 수 있다.
+
 
 
 
 
 비기능적 요구사항
 1. 트랜잭션
-    1. 숙소 예약은 결제가 취소된 경우 불가해야한다.  Sync 호출
-    1. 결제가 완료 되지 않은 예약 건은 예약이 성립되지 않는다.  Sync 호출
-    1. 예약과 결제는 동시에 진행된다.  Sync 호출
-    1. 예약 취소와 결제 취소는 동시에 진행된다.  Sync 호출
+    1. 장비 오더는 승인이 되지 않는 경우 성립불가해야한다.  Sync 호출
+    1. 오더와 승인은 동시에 일어난다.  Sync 호출
+
 1. 장애격리
-    1. 숙소 시스템이 수행되지 않더라도 예약 / 결제는365일 24시간 받을 수 있어야 한다.  Async 호출 (event-driven)
-    1. 숙소 시스템이 과중 되면 예약 / 결제를 받지 않고 결제 취소를 잠시 후에 하도록 유도한다.  Circuit breaker, fallback
-    1. 제가 취소되면 숙소의 예약 취소가 확정되고, 숙소의 예약 가능 여부가 변경된다.  Circuit breaker, fallback
+    1. 승인이 모듈이 멈추더라도 오더는365일 24시간 받을 수 있어야 한다. Async 호출 (event-driven)
+    1. 오더 시스템이 과중되면 승인을 받지 않고 오더취소를 잠시후에 하도록 유도한다  Circuit breaker, fallback
+    1. 장비 모듈은 오더 / 승인 모듈과 분리된다.
 1. 성능
-    1. 고객은 숙소 예약 가능 여부를 확인할 수 있다.  CQRS
-    1. 예약/결제 취소 정보가 변경 될 때마다 숙소 예약 가능 여부가 변경 될 수 있어야 한다.  Event Driven
+    1. Employee는 오더의 상태를 확인할 수 있다.  CQRS
+    1. 오더가 승인되면 오더의 상태도 변경된다.  Async 호출
 
 
 
@@ -142,9 +141,9 @@
 ![image](https://user-images.githubusercontent.com/70302894/96409243-ed552b00-121f-11eb-8f12-d704f1d81447.JPG)
 
     - 도메인 서열 분리 
-        - 예약 : 고객 예약 오류를 최소화 한다. (Core)
-        - 결제 : 결제 오류를 최소화 한다. (Supporting)
-        - 숙소 : 숙소 예약 상태 오류를 최소화 한다. (Supporting)
+        - 오더 : 오더 오류를 최소화 한다. (Core)
+        - 승인 : 승인 오류를 최소화 한다. (Supporting)
+        - 장비 : 장비 재고 관리 오류를 최소화 한다. (Supporting)
 
 ### 폴리시 부착 (괄호는 수행주체, 폴리시 부착을 둘째단계에서 해놔도 상관 없음. 전체 연계가 초기에 드러남)
 
@@ -164,11 +163,11 @@
 
 ![image](https://user-images.githubusercontent.com/70302894/96409249-ef1eee80-121f-11eb-987e-a1af6fbb00d9.jpg)
 
-    - 고객이 숙소 예약 가능 여부를 확인한다.(?)
-    - 고객이 숙소를 선택해 예약을 진행한다. (OK)
-    - 예약 시 자동으로 결제가 진행된다. (OK)
-    - 결제가 성공하면 숙소가 예약불가 상태가 된다. (OK)
-    - 숙소 상태 변경 시 예약이 확정상태가 된다. (OK)    
+    - Employee가 오더의 상태를 확인한다.(?)
+    - Employee가 장비를 선택해 오더한다. (OK)
+    - 오더 시 자동 승인된다. (OK)
+    - 승인 시 장비의 재고가 감소한다. (OK)
+    - 승인 시 오더의 상태가 APPROVED로 변경된다. (OK)
     
 
 
@@ -179,10 +178,9 @@
 ![image](https://user-images.githubusercontent.com/70302894/96409250-efb78500-121f-11eb-8d85-83d1ddb234b8.jpg)
 
 
-    - 고객이 예약/결제를 취소한다. (OK)
-    - 예약/결제 취소 시 자동 예약/결제 취소된다. (OK)
-    - 결제가 취소되면 숙소가 예약가능 상태가 된다. (OK)
-
+    - Employee가 오더를 취소한다. (OK)
+    - 오더 취소 시 자동 승인 취소된다. (OK)
+    - 승인이 취소되면 장비의 재고가 증가한다. (OK)
 
 
 
@@ -201,9 +199,9 @@
 ![image](https://user-images.githubusercontent.com/70302894/96408042-a1a18200-121d-11eb-93cb-c21d735967df.JPG)
 
 
-    - 1. 숙소 등록 서비스를 예약/결제 서비스와 격리하여 숙소 등록 서비스 장애 시에도 예약이 가능
-    - 2. 숙소가 예약 불가 상태일 경우 예약 확정이 불가함
-    - 3. 먼저 결제가 이루어진 숙소에 대해서는 예약을 불가 하도록 함.    
+    - 1. 장비등록 서비스를 오더 / 승인 서비스와 격리되어 오더 / 승인 모듈 장애 시에도 장비 등록 가능
+    - 2. 2.	오더 승인 시 오더의 상태가 변경되며 이를 별도의 모듈로 확인 가능
+ 
 
 
 
@@ -228,39 +226,85 @@
 분석/설계 단계에서 도출된 헥사고날 아키텍처에 따라, 각 BC별로 대변되는 마이크로 서비스들을 스프링부트로 구현하였다. 구현한 각 서비스를 로컬에서 실행하는 방법은 아래와 같다 (각자의 포트넘버는 8081 ~ 808n 이다)
 
 ```
-cd book
+cd equipment
 mvn spring-boot:run
 
-cd payment
+cd order
 mvn spring-boot:run 
 
-cd house
+cd approval
 mvn spring-boot:run  
 
-cd mypage
+cd mis
 mvn spring-boot:run  
 ```
+
+```
+gateway의 application.yml
+        - id: order
+          uri: http://localhost:8081
+          predicates:
+            - Path=/orders/** 
+        - id: approval
+          uri: http://localhost:8082
+          predicates:
+            - Path=/approvals/** 
+        - id: equipment
+          uri: http://localhost:8083
+          predicates:
+            - Path=/equipment/** 
+        - id: mis
+          uri: http://localhost:8084
+          predicates:
+            - Path= /mis/** 
+```
+
+
 
 ## DDD 의 적용
 
-- 각 서비스내에 도출된 핵심 Aggregate Root 객체를 Entity 로 선언하였다. 
+- 각 서비스내에 도출된 Aggregate Root 객체를 Entity 로 선언하였다. (Approval)
+- Approval모듈은 각 연동 서비스의 key를 가지고 있다. (orderId, equipmentId)
 
 ```
-package fooddelivery;
+package equipmgnt;
 
 import javax.persistence.*;
 import org.springframework.beans.BeanUtils;
 import java.util.List;
 
 @Entity
-@Table(name="결제이력_table")
-public class 결제이력 {
+@Table(name="Approval_table")
+public class Approval {
 
     @Id
     @GeneratedValue(strategy=GenerationType.AUTO)
     private Long id;
-    private String orderId;
-    private Double 금액;
+    private Long equipmentId;
+    private Long orderId;
+    private Integer qty;
+    private String status;
+
+    @PostPersist
+    public void onPostPersist(){
+
+        ApprovalObtained approvalObtained = new ApprovalObtained();
+        BeanUtils.copyProperties(this, approvalObtained);
+        approvalObtained.publishAfterCommit();
+
+
+    }
+
+    @PostUpdate
+    public void onPostUpdate(){
+        if(this.getStatus().equals("CANCELLED")) {
+            CancelRequested cancelRequested = new CancelRequested();
+            BeanUtils.copyProperties(this, cancelRequested);
+            cancelRequested.publishAfterCommit();
+        }
+
+    }
+
 
     public Long getId() {
         return id;
@@ -269,43 +313,69 @@ public class 결제이력 {
     public void setId(Long id) {
         this.id = id;
     }
-    public String getOrderId() {
+    public Long getEquipmentId() {
+        return equipmentId;
+    }
+
+    public void setEquipmentId(Long equipmentId) {
+        this.equipmentId = equipmentId;
+    }
+    public Long getOrderId() {
         return orderId;
     }
 
-    public void setOrderId(String orderId) {
+    public void setOrderId(Long orderId) {
         this.orderId = orderId;
     }
-    public Double get금액() {
-        return 금액;
+    public Integer getQty() {
+        return qty;
     }
 
-    public void set금액(Double 금액) {
-        this.금액 = 금액;
+    public void setQty(Integer qty) {
+        this.qty = qty;
     }
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+
+
 
 }
+
 
 ```
 - Entity Pattern 과 Repository Pattern 을 적용하여 JPA 를 통하여 다양한 데이터소스 유형에 대한 별도의 처리가 없도록 데이터 접근 어댑터를 자동 생성하기 위하여 Spring Data REST 의 RestRepository 를 적용하였다
 ```
-package fooddelivery;
+package equipmgnt;
 
 import org.springframework.data.repository.PagingAndSortingRepository;
 
-public interface 결제이력Repository extends PagingAndSortingRepository<결제이력, Long>{
+public interface OrderRepository extends PagingAndSortingRepository<Order, Long>{
+
+
 }
 ```
 - 적용 후 REST API 의 테스트
 ```
-# app 서비스의 주문처리
-http localhost:8081/orders item="통닭"
+# equipment 서비스의 장비등록
+http http://localhost:8083/equipments stock=10 
 
-# store 서비스의 배달처리
-http localhost:8083/주문처리s orderId=1
+# order 서비스의 오더
+http http://localhost:8081/orders qty=2 equipmentId=1 status=ORDERED
 
-# 주문 상태 확인
-http localhost:8081/orders/1
+# approval 서비스의 승인 상태 확인
+http http://localhost:8082/approvals
+
+# order 서비스의 오더 상태 확인
+http http://localhost:8081/orders/1
+
+# equipment 서비스의 장비 상태 확인
+http http://localhost:8083/equipments/1
 
 ```
 
