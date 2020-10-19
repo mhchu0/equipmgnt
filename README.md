@@ -553,25 +553,27 @@ http http://localhost:8081/orders qty=3 equipmentId=1 status=ORDERED   #Success
 ```
 
 
-```
 
-장비 시스템은 오더/승인과 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, /승인 시스템이 유지보수로 인해 잠시 내려간 상태라도 장비를 등록하는데 문제가 없다:
+
+- 장비 시스템은 오더/승인과 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, 오더/승인 시스템이 유지보수로 인해 잠시 내려간 상태라도 장비를 등록하는데 문제가 없다:
+- 또한 
 ```
-# 상점 서비스 (store) 를 잠시 내려놓음 (ctrl+c)
+# 승인 서비스 (approval) 를 잠시 내려놓음 (ctrl+c)
 
 #주문처리
-http localhost:8081/orders item=통닭 storeId=1   #Success
-http localhost:8081/orders item=피자 storeId=2   #Success
+
+#주문처리
+http http://localhost:8081/orders qty=2 equipmentId=1 status=ORDERED   #Success
 
 #주문상태 확인
-http localhost:8080/orders     # 주문상태 안바뀜 확인
+http localhost:8081/orders     # 주문상태 안바뀜 확인
 
-#상점 서비스 기동
-cd 상점
+#승인서비스 기동
+cd approval
 mvn spring-boot:run
 
 #주문상태 확인
-http localhost:8080/orders     # 모든 주문의 상태가 "배송됨"으로 확인
+http localhost:8081/orders     # 모든 주문의 상태가 "APPROVED"으로 확인
 ```
 
 
