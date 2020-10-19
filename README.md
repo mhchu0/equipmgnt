@@ -139,7 +139,7 @@
 
 ### 바운디드 컨텍스트로 묶기
 
-![image](hhttps://user-images.githubusercontent.com/70302894/96408030-9ea69180-121d-11eb-816d-62876f049b34.JPG)
+![image](https://user-images.githubusercontent.com/70302894/96408030-9ea69180-121d-11eb-816d-62876f049b34.JPG)
 
     - 도메인 서열 분리 
         - 예약 : 고객 예약 오류를 최소화 한다. (Core)
