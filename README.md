@@ -133,13 +133,13 @@
 
 
 ### 어그리게잇으로 묶기 / 액터, 커맨드 부착하여 읽기 좋게
-![image](https://user-images.githubusercontent.com/70302894/96408029-9e0dfb00-121d-11eb-9c21-796594abeaba.JPG)
+![image](https://user-images.githubusercontent.com/70302894/96409240-ec23fe00-121f-11eb-9ccd-66b428a4047f.JPG)
 
     - 숙소 예약, 결제, 숙소 관리 등은 그와 연결된 command 와 event 들에 의하여 트랜잭션이 유지되어야 하는 단위로 묶어준다.
 
 ### 바운디드 컨텍스트로 묶기
 
-![image](https://user-images.githubusercontent.com/70302894/96408030-9ea69180-121d-11eb-816d-62876f049b34.JPG)
+![image](https://user-images.githubusercontent.com/70302894/96409243-ed552b00-121f-11eb-8f12-d704f1d81447.JPG)
 
     - 도메인 서열 분리 
         - 예약 : 고객 예약 오류를 최소화 한다. (Core)
@@ -148,7 +148,7 @@
 
 ### 폴리시 부착 (괄호는 수행주체, 폴리시 부착을 둘째단계에서 해놔도 상관 없음. 전체 연계가 초기에 드러남)
 
-![image](https://user-images.githubusercontent.com/70302894/96408033-9f3f2800-121d-11eb-80a6-6c5fe8b87ddf.JPG)
+![image](https://user-images.githubusercontent.com/70302894/96409245-ededc180-121f-11eb-9389-90bc8bd86a5e.JPG)
 
 ### 폴리시의 이동과 컨텍스트 매핑 (점선은 Pub/Sub, 실선은 Req/Resp)
 
@@ -156,13 +156,13 @@
 
 ### 완성된 1차 모형
 
-![image](https://user-images.githubusercontent.com/70302894/96408036-9fd7be80-121d-11eb-9750-3a2ed267d102.jpg)
+![image](https://user-images.githubusercontent.com/70302894/96409246-ededc180-121f-11eb-882b-9a5dc9ccc0fd.JPG)
 
 
 
 ### 1차 완성본에 대한 기능적/비기능적 요구사항을 커버하는지 검증
 
-![image](https://user-images.githubusercontent.com/70302894/96408037-a0705500-121d-11eb-9e89-d649ef0a30f8.jpg)
+![image](https://user-images.githubusercontent.com/70302894/96409249-ef1eee80-121f-11eb-987e-a1af6fbb00d9.jpg)
 
     - 고객이 숙소 예약 가능 여부를 확인한다.(?)
     - 고객이 숙소를 선택해 예약을 진행한다. (OK)
@@ -176,7 +176,7 @@
 
 
 
-![image](https://user-images.githubusercontent.com/70302894/96408040-a108eb80-121d-11eb-9e00-fa85e656c283.jpg)
+![image](https://user-images.githubusercontent.com/70302894/96409250-efb78500-121f-11eb-8d85-83d1ddb234b8.jpg)
 
 
     - 고객이 예약/결제를 취소한다. (OK)
