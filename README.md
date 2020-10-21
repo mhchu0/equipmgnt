@@ -585,6 +585,17 @@ siege -c20 -t20S -v  --content-type "application/json" 'http://skccuser24-approv
 
 - 운영시스템은 죽지 않고 지속적으로 CB 에 의하여 적절히 회로가 열림과 닫힘이 벌어지면서 자원을 보호하고 있음을 보여줌. 
 
+
+- 키알리 확인
+![키알리](https://user-images.githubusercontent.com/70302894/96725075-79677e00-13eb-11eb-99ae-704bc46b7cfd.JPG)
+
+
+- 예거 확인
+![예거](https://user-images.githubusercontent.com/70302894/96725063-77052400-13eb-11eb-94c7-1281c6eea698.JPG)
+
+
+
+
 ### 오토스케일 아웃
 앞서 CB 는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다. 
 
@@ -657,12 +668,20 @@ siege -c20 -t120S -v  --content-type "application/json" 'http://skccuser24-appro
 
 
 ## Liveness Probe
+- 부하테스트 중 갑자기 서비스가 죽음
+- kubectl get all -n istio-cb-ns -w에서 확인 시 pod가 1/2로 줄었다가 다시 올라옴 (Liveness Probe 적용인지?)
 
+![라이브니스0](https://user-images.githubusercontent.com/70302894/96725041-72d90680-13eb-11eb-8f02-2a271b982722.JPG)
 
-
+![라이브니스2](https://user-images.githubusercontent.com/70302894/96725045-740a3380-13eb-11eb-834b-47a8d67f2f7b.JPG)
 
 ## configmap
+- configmap 생성
+![콘픽맵생성](https://user-images.githubusercontent.com/70302894/96725072-78cee780-13eb-11eb-8bae-bec18b4217ad.JPG)
 
+
+- describe로 생성 확인
+![콘픽맵생성확인](https://user-images.githubusercontent.com/70302894/96725074-79677e00-13eb-11eb-96c7-b06337ba72d2.JPG)
 
 
 
