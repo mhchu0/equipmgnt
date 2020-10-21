@@ -508,6 +508,13 @@ http localhost:8081/orders     # 주문의 상태가 "APPROVED"으로 확인
 
 각 구현체들은 각자의 source repository 에 구성되었고, 사용한 CI/CD 플랫폼은 AWS CodeBuild를 사용하였으며, pipeline build script 는 각 프로젝트 폴더 이하에 buildspec.yml 에 포함되었다.
 
+github의 코드 수정이 발생하거나 코드빌드에서 빌드할 경우 자동으로 연동되어 빌드 된다.
+![코드빌드1](https://user-images.githubusercontent.com/70302894/96725070-78365100-13eb-11eb-93ea-9e085e28f3e5.JPG)
+![코드빌드2](https://user-images.githubusercontent.com/70302894/96725071-78365100-13eb-11eb-8d55-90db8270c9ce.JPG)
+
+
+
+
 ## 동기식 호출 / 서킷 브레이킹 / 장애격리
 
 * 서킷 브레이킹은 istio destination 룰 적용하여 구현한다.
@@ -553,16 +560,16 @@ spec:
   trafficPolicy:
     connectionPool:
       tcp:
-        maxConnections: 1024           # 목적지로 가는 HTTP, TCP connection 최대 값. (Default 1024)
+        maxConnections: 1024          
       http:
-        http1MaxPendingRequests: 1  # 연결을 기다리는 request 수를 1개로 제한 (Default 
-        maxRequestsPerConnection: 1 # keep alive 기능 disable
-        maxRetries: 3               # 기다리는 동안 최대 재시도 수(Default 1024)
+        http1MaxPendingRequests: 1   
+        maxRequestsPerConnection: 1
+        maxRetries: 3              
     outlierDetection:
-      consecutiveErrors: 2          # 5xx 에러가 5번 발생하면
-      interval: 1s                  # 1초마다 스캔 하여
-      baseEjectionTime: 30s         # 30 초 동안 circuit breaking 처리   
-      maxEjectionPercent: 7       # 100% 로 차단
+      consecutiveErrors: 2          
+      interval: 1s                 
+      baseEjectionTime: 30s        
+      maxEjectionPercent: 7      
 EOF
 ```
 
@@ -614,19 +621,27 @@ kubectl get deploy skccuser24-approval -w
 
 * 먼저 무정지 재배포가 100% 되는 것인지 확인하기 위해서 Autoscaler 이나 Readiness Probe 미설정 시 무정지 재배포 가능여부 확인을 위해 buildspec.yml의 Readiness Probe 설정을 제거함
 
-- Readiness Probe 제거한 상태에서 부하를 주고 측정 시 Availability가 80%대로 떨어짐. 원인은 쿠버네티스가 성급하게 새로 올려진 서비스를 READY 상태로 인식하여 서비스 유입을 진행한 것이기 때문. 이를 막기위해 Readiness Probe 를 설정함:
+- Readiness Probe 제거한 상태에서 부하를 줌 
 ```
 siege -c20 -t120S -v  --content-type "application/json" 'http://skccuser24-approval:8080/approvals POST {"orderId":"1","equipmentId":"1"}'
 ```
+
+- Availability가 80%대로 떨어짐. 원인은 쿠버네티스가 성급하게 새로 올려진 서비스를 READY 상태로 인식하여 서비스 유입을 진행한 것이기 때문.
+
 ![무정지배포88](https://user-images.githubusercontent.com/70302894/96725049-74a2ca00-13eb-11eb-801d-5ffe64dd8460.JPG)
 
 
-
+- deployment.yaml 의 readiness probe를 다시 설정
 ```
-# deployment.yaml 의 readiness probe 의 설정:
+          readinessProbe:
+            httpGet:
+              path: '/actuator/health'
+              port: 8080
+            initialDelaySeconds: 10
+            timeoutSeconds: 2
+            periodSeconds: 5
+            failureThreshold: 10
 
-
-kubectl apply -f kubernetes/deployment.yaml
 ```
 
 - 동일한 시나리오로 재배포 한 후 Availability 확인:
