@@ -668,21 +668,67 @@ siege -c20 -t120S -v  --content-type "application/json" 'http://skccuser24-appro
 
 
 ## Liveness Probe
-- 부하테스트 중 갑자기 서비스가 죽음
-- kubectl get all -n istio-cb-ns -w에서 확인 시 pod가 1/2로 줄었다가 다시 올라옴 (Liveness Probe 적용인지?)
+- 부하테스트 중 갑자기 서비스에서 5xx만 떨어짐
+- kubectl get all -n istio-cb-ns -w에서 확인 시 pod가 1/2로 줄었다가 다시 2/2로 올라옴 (Liveness Probe 적용인지?)
 
 ![라이브니스0](https://user-images.githubusercontent.com/70302894/96725041-72d90680-13eb-11eb-8f02-2a271b982722.JPG)
 
+![라이브니스](https://user-images.githubusercontent.com/70302894/96725076-7a001480-13eb-11eb-8fef-0d35ce8728ce.JPG)
+
 ![라이브니스2](https://user-images.githubusercontent.com/70302894/96725045-740a3380-13eb-11eb-834b-47a8d67f2f7b.JPG)
 
+
+
 ## configmap
+
 - configmap 생성
+
+
 ![콘픽맵생성](https://user-images.githubusercontent.com/70302894/96725072-78cee780-13eb-11eb-8bae-bec18b4217ad.JPG)
 
 
-- describe로 생성 확인
-![콘픽맵생성확인](https://user-images.githubusercontent.com/70302894/96725074-79677e00-13eb-11eb-96c7-b06337ba72d2.JPG)
+- house deployment를 위에서 생성한 house-region(cm)의 값을 사용 할 수 있도록 수정한다.
+```
+configmap내용을 deployment에 적용
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: equipment
+  labels:
+    app: equipment
+...
+    spec:
+      containers:
+        - name: equipment
+          env:                                                 ##### 컨테이너에서 사용할 환경 변수 설정
+            - name: EQUIPMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: equipment-category
+                  key: equipment
+            - name: CATEGORY
+              valueFrom:
+                configMapKeyRef:
+                  name: equipment-category
+                  key: region
+          volumeMounts:                                                 ##### CM볼륨을 바인딩
+          - name: config
+            mountPath: "/config"
+            readOnly: true
+...
+      volumes:                                                 ##### CM 볼륨 
+      - name: config
+        configMap:
+          name: equipment-category
+```
 
+
+
+
+- describe로 생성 확인
+
+
+![콘픽맵생성확인](https://user-images.githubusercontent.com/70302894/96725074-79677e00-13eb-11eb-96c7-b06337ba72d2.JPG)
 
 
 
