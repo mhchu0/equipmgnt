@@ -134,7 +134,7 @@
 ### 어그리게잇으로 묶기 / 액터, 커맨드 부착하여 읽기 좋게
 ![image](https://user-images.githubusercontent.com/70302894/96409240-ec23fe00-121f-11eb-9ccd-66b428a4047f.JPG)
 
-    - 숙소 예약, 결제, 숙소 관리 등은 그와 연결된 command 와 event 들에 의하여 트랜잭션이 유지되어야 하는 단위로 묶어준다.
+    - 장비, 승인,  등은 그와 연결된 command 와 event 들에 의하여 트랜잭션이 유지되어야 하는 단위로 묶어준다.
 
 ### 바운디드 컨텍스트로 묶기
 
@@ -239,8 +239,10 @@ cd mis
 mvn spring-boot:run  
 ```
 
+gateway의 application.yml에 spirng, docker 환경별 uri이 설정되어있다.
+
 ```
-gateway의 application.yml
+
         - id: order
           uri: http://localhost:8081
           predicates:
@@ -257,6 +259,24 @@ gateway의 application.yml
           uri: http://localhost:8084
           predicates:
             - Path= /mis/** 
+	    
+
+        - id: order
+          uri: http://order:8080
+          predicates:
+            - Path=/orders/** 
+        - id: approval
+          uri: http://approval:8080
+          predicates:
+            - Path=/approvals/** 
+        - id: equipment
+          uri: http://equipment:8080
+          predicates:
+            - Path=/equipment/** 
+        - id: mis
+          uri: http://mis:8080
+          predicates:
+            - Path= /mis/**    
 ```
 
 
@@ -284,27 +304,8 @@ public class Approval {
     private Long orderId;
     private Integer qty;
     private String status;
-
-    @PostPersist
-    public void onPostPersist(){
-
-        ApprovalObtained approvalObtained = new ApprovalObtained();
-        BeanUtils.copyProperties(this, approvalObtained);
-        approvalObtained.publishAfterCommit();
-
-
-    }
-
-    @PostUpdate
-    public void onPostUpdate(){
-        if(this.getStatus().equals("CANCELLED")) {
-            CancelRequested cancelRequested = new CancelRequested();
-            BeanUtils.copyProperties(this, cancelRequested);
-            cancelRequested.publishAfterCommit();
-        }
-
-    }
-
+    
+    ....중략
 
     public Long getId() {
         return id;
@@ -330,21 +331,7 @@ public class Approval {
     public Integer getQty() {
         return qty;
     }
-
-    public void setQty(Integer qty) {
-        this.qty = qty;
-    }
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-
-
-
+    ....중략
 }
 
 
@@ -474,7 +461,7 @@ public interface ApprovalService {
 ```
 # 승인 (approval) 서비스를 잠시 내려놓음 (ctrl+c)
 
-#오더처리
+#오더취소처리
 http http://localhost:8081/orders qty=2 equipmentId=1 status=ORDERED   #Fail
 http http://localhost:8081/orders qty=3 equipmentId=1 status=ORDERED   #Fail
 
@@ -482,7 +469,7 @@ http http://localhost:8081/orders qty=3 equipmentId=1 status=ORDERED   #Fail
 cd approval
 mvn spring-boot:run
 
-#주문처리
+#오더취소처리
 http http://localhost:8081/orders qty=2 equipmentId=1 status=ORDERED   #Success
 http http://localhost:8081/orders qty=3 equipmentId=1 status=ORDERED   #Success
 ```
@@ -554,24 +541,24 @@ http http://localhost:8081/orders qty=3 equipmentId=1 status=ORDERED   #Success
 
 
 
-
-- 장비 시스템은 오더/승인과 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, 오더/승인 시스템이 유지보수로 인해 잠시 내려간 상태라도 장비를 등록하는데 문제가 없다: 
+- 오더-승인 시스템은 비동기로 처리되므로 승인 시스템이 유지보수로 인해 잠시 내려간 상태라도 오더를 받는덴 문제가 없다:
+ 
 ```
 # 승인 서비스 (approval) 를 잠시 내려놓음 (ctrl+c)
 
 
-#주문처리
+#오더처리
 http http://localhost:8081/orders qty=2 equipmentId=1 status=ORDERED   #Success
 
-#주문상태 확인
-http localhost:8081/orders     # 주문상태 안바뀜 확인
+#오더상태 확인
+http localhost:8081/orders     # APPROVED로 안바뀜 확인
 
 #승인서비스 기동
 cd approval
 mvn spring-boot:run
 
-#주문상태 확인
-http localhost:8081/orders     # 모든 주문의 상태가 "APPROVED"으로 확인
+#오더상태 확인
+http localhost:8081/orders     # 주문의 상태가 "APPROVED"으로 확인
 ```
 
 
