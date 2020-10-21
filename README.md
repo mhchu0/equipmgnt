@@ -19,7 +19,7 @@
     - [동기식 호출 / 서킷 브레이킹 / 장애격리](#동기식-호출-서킷-브레이킹-장애격리)
     - [오토스케일 아웃](#오토스케일-아웃)
     - [무정지 재배포](#무정지-재배포)
-  - [신규 개발 조직의 추가](#신규-개발-조직의-추가)
+    - [configmap](#신규-개발-조직의-추가)
 
 # 서비스 시나리오
 
@@ -43,9 +43,9 @@
     1. 오더와 승인은 동시에 일어난다.  Sync 호출
 
 1. 장애격리
-    1. 승인이 모듈이 멈추더라도 오더는365일 24시간 받을 수 있어야 한다. Async 호출 (event-driven)
+    1. 승인 모듈이 멈추더라도 오더는365일 24시간 받을 수 있어야 한다. Async 호출 (event-driven)
     1. 오더 시스템이 과중되면 승인을 받지 않고 오더취소를 잠시후에 하도록 유도한다  Circuit breaker, fallback
-    1. 장비 모듈은 오더 / 승인 모듈과 분리된다.
+
 1. 성능
     1. Employee는 오더의 상태를 확인할 수 있다.  CQRS
     1. 오더가 승인되면 오더의 상태도 변경된다.  Async 호출
@@ -190,7 +190,7 @@
 
 ![image](https://user-images.githubusercontent.com/70302894/96394207-5d51ba00-11fc-11eb-80d9-1d5bb4356b1a.JPG)
     
-    - View Model 추가
+    - View Model 추가 (CQRS 적용)
     - 수정된 모델은 모든 요구사항을 커버함.
 
 
@@ -200,7 +200,7 @@
 
 
     - 1. 장비등록 서비스를 오더 / 승인 서비스와 격리되어 오더 / 승인 모듈 장애 시에도 장비 등록 가능
-    - 2. 오더 승인 시 오더의 상태가 변경되며 이를 별도의 모듈로 확인 가능
+    - 2. 오더 승인 시 오더의 상태도 
  
 
 
@@ -264,7 +264,7 @@ gateway의 application.yml
 ## DDD 의 적용
 
 - 각 서비스내에 도출된 Aggregate Root 객체를 Entity 로 선언하였다. (Approval)
-- Approval모듈은 각 연동 서비스의 key를 가지고 있다. (orderId, equipmentId)
+- Approval모듈은 각 연동 서비스의 key를 가지고 있어 연동 시 어떠한 요청 건인지 구별 가능하다. (Correlation-key)
 
 ```
 package equipmgnt;
@@ -555,12 +555,10 @@ http http://localhost:8081/orders qty=3 equipmentId=1 status=ORDERED   #Success
 
 
 
-- 장비 시스템은 오더/승인과 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, 오더/승인 시스템이 유지보수로 인해 잠시 내려간 상태라도 장비를 등록하는데 문제가 없다:
-- 또한 
+- 장비 시스템은 오더/승인과 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, 오더/승인 시스템이 유지보수로 인해 잠시 내려간 상태라도 장비를 등록하는데 문제가 없다: 
 ```
 # 승인 서비스 (approval) 를 잠시 내려놓음 (ctrl+c)
 
-#주문처리
 
 #주문처리
 http http://localhost:8081/orders qty=2 equipmentId=1 status=ORDERED   #Success
@@ -605,20 +603,22 @@ hystrix:
 
 ```
 
-- 피호출 서비스(결제:pay) 의 임의 부하 처리 - 400 밀리에서 증감 220 밀리 정도 왔다갔다 하게
+- 피호출 서비스(승인)의 임의 부하 처리 - 400 밀리에서 증감 220 밀리 정도 왔다갔다 하게
 ```
-# (pay) 결제이력.java (Entity)
+# Approval.java (Entity)
 
-    @PrePersist
-    public void onPrePersist(){  //결제이력을 저장한 후 적당한 시간 끌기
-
-        ...
-        
+    @PostPersist
+    public void onPostPersist(){
         try {
-            Thread.currentThread().sleep((long) (400 + Math.random() * 220));
+            Thread.currentThread().sleep((long) (800 + Math.random() * 220));
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        ApprovalObtained approvalObtained = new ApprovalObtained();
+        BeanUtils.copyProperties(this, approvalObtained);
+        approvalObtained.publishAfterCommit();
+
+
     }
 ```
 
@@ -859,4 +859,23 @@ Concurrency:		       96.02
 ```
 
 배포기간 동안 Availability 가 변화없기 때문에 무정지 재배포가 성공한 것으로 확인됨.
+
+
+## Readiness Probe
+
+
+
+
+## Liveness Probe
+
+
+
+
+## configmap
+
+
+
+
+
+
 
