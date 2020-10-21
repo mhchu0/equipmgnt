@@ -287,23 +287,43 @@ public interface OrderRepository extends PagingAndSortingRepository<Order, Long>
 }
 ```
 - 적용 후 REST API 의 테스트
-```
-# equipment 서비스의 장비등록
+
+equipment 서비스의 장비등록
 http http://localhost:8083/equipments stock=10 
 
-# order 서비스의 오더
+![등록](https://user-images.githubusercontent.com/70302894/96725131-8b492100-13eb-11eb-9c9e-2131b76b17f8.JPG)
+
+order 서비스의 오더
 http http://localhost:8081/orders qty=2 equipmentId=1 status=ORDERED
 
-# approval 서비스의 승인 상태 확인
+![승인취소](https://user-images.githubusercontent.com/70302894/96725135-8be1b780-13eb-11eb-9019-5fe299345823.JPG)
+
+approval 서비스의 승인 상태 확인
 http http://localhost:8082/approvals
 
-# order 서비스의 오더 상태 확인
+![승인](https://user-images.githubusercontent.com/70302894/96725132-8b492100-13eb-11eb-9cd4-2e7a50bb7b64.JPG)
+
+order 서비스의 오더 상태 확인
 http http://localhost:8081/orders/1
 
-# equipment 서비스의 장비 상태 확인
+![오더확인](https://user-images.githubusercontent.com/70302894/96725140-8d12e480-13eb-11eb-8dea-67b2a03841fd.JPG)
+
+equipment 서비스의 장비 상태 확인 (재고 줄어듬)
 http http://localhost:8083/equipments/1
 
-```
+![재고줄어듬확인](https://user-images.githubusercontent.com/70302894/96725146-8dab7b00-13eb-11eb-886f-d23fc8144d72.JPG)
+
+order서비스의 오더 취소 시 승인취소 연동 / 재고 늘어남 확인
+![오더취소](https://user-images.githubusercontent.com/70302894/96725137-8c7a4e00-13eb-11eb-81aa-59a7cb10291c.JPG)
+![승인취소](https://user-images.githubusercontent.com/70302894/96725135-8be1b780-13eb-11eb-9019-5fe299345823.JPG)
+![재고늘어남확인](https://user-images.githubusercontent.com/70302894/96725143-8d12e480-13eb-11eb-9c30-885863cd97f9.JPG)
+
+
+- CQRS (View) 확인, 오더 상태를 확인 가능하다. 
+
+![mis확인](https://user-images.githubusercontent.com/70302894/96725129-8a17f400-13eb-11eb-83d1-a87e88b3a06c.JPG)
+
+![CQRS](https://user-images.githubusercontent.com/70302894/96733719-bbe18880-13f4-11eb-94b2-5ca45cf05e55.JPG)
 
 
 ## 폴리글랏 퍼시스턴스
