@@ -296,7 +296,7 @@ http http://localhost:8083/equipments stock=10
 order 서비스의 오더
 http http://localhost:8081/orders qty=2 equipmentId=1 status=ORDERED
 
-![승인취소](https://user-images.githubusercontent.com/70302894/96725135-8be1b780-13eb-11eb-9019-5fe299345823.JPG)
+![](https://user-images.githubusercontent.com/70302894/96725136-8be1b780-13eb-11eb-95e0-9f516d457940.JPG)
 
 approval 서비스의 승인 상태 확인
 http http://localhost:8082/approvals
